@@ -5,7 +5,7 @@
 
 ## 截图展示
 
-![华天兴能燃气费小组件截图](./files/huatianxingneng.png)
+![华天兴能燃气费小组件截图](./huatianxingneng.png)
 
 ## 功能特性
 
