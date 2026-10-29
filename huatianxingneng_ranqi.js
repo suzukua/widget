@@ -313,7 +313,7 @@ function makeWidget(data, stale = false, message = null) {
   const w = new ListWidget();
   const grad = new LinearGradient();
   grad.locations = [0, 0.55, 1];
-  grad.colors = [tc("#000000", "#F2F7FB"), tc("#000000", "#E8F2F8"), tc("#000000", "#F7FAFC")];
+  grad.colors = [tc("#1B1C1B", "#F2F7FB"), tc("#111211", "#E8F2F8"), tc("#08090A", "#F7FAFC")];
   w.backgroundGradient = grad;
   w.setPadding(smallFamily ? 11 : 12, smallFamily ? 13 : 16, smallFamily ? 11 : 12, smallFamily ? 13 : 16);
   w.url = "http://wx.huatianxn.qjcode.com/page/#/bill-query";
@@ -374,7 +374,7 @@ function makeWidget(data, stale = false, message = null) {
   arrearsLabel.textColor = tc("#9EB7C9", "#5C7C91");
   const arrearsValue = arrearsRow.addText(arrearsKnown ? (noArrears ? "无" : "¥" + Number(arrears).toFixed(2)) : "待确认");
   arrearsValue.font = Font.semiboldSystemFont(smallFamily ? 8 : 9);
-  arrearsValue.textColor = noArrears ? tc("#48E6B0", "#087F61") : tc(arrearsKnown ? "#FF9F6E" : "#A9BCC9", arrearsKnown ? "#C65328" : "#687D8B");
+  arrearsValue.textColor = noArrears ? tc("#48E6B0", "#087F61") : tc(arrearsKnown ? "#FF453A" : "#B7C4CF", arrearsKnown ? "#C65328" : "#687D8B");
   arrearsRow.addSpacer(smallFamily ? 4 : 8);
   const currentUsage = arrearsRow.addText("本期 " + Number(latest.volume).toFixed(0) + "m³");
   currentUsage.font = Font.systemFont(smallFamily ? 7 : 8);
