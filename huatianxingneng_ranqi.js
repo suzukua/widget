@@ -43,7 +43,7 @@ const CONFIG = {
   consNo: "",
   cacheKey: "huatian_gas_bill_cache_v3",
   color: "#51B6FF",
-  refreshMinutes: 1440,
+  refreshMinutes: 720,
 };
 
 const PASSWORD_KEY = "huatian_gas_widget_password_v1";

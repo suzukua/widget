@@ -28,6 +28,7 @@ const SSO_PASSWORD = "";
 const SESSION_KEY = "cdwater.session.v1";
 const ACCOUNT_KEY = "cdwater.accountId.v1";
 const DAILY_CACHE_KEY = "cdwater.dailyCache.v2";
+const REFRESH_MINUTES = 720;
 function uuid() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -479,12 +480,6 @@ function localDateKey(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function nextDailyRefresh(date) {
-  const next = new Date(date);
-  next.setHours(24, 5, 0, 0);
-  return next;
-}
-
 async function makeWidget() {
   const widget = new ListWidget();
   widget.backgroundColor = new Color("#000000");
@@ -641,7 +636,7 @@ async function makeWidget() {
     detail.font = Font.systemFont(8);
     detail.textColor = new Color("#8E8E93");
   }
-  widget.refreshAfterDate = nextDailyRefresh(new Date());
+  widget.refreshAfterDate = new Date(Date.now() + REFRESH_MINUTES * 60 * 1000);
   return widget;
 }
 
