@@ -299,198 +299,211 @@ function writeCache(data) {
 
 function makeWidget(data, stale = false, message = null) {
   const smallFamily = config.widgetFamily === "small";
-  const tc = (dark, light) => new Color(dark);
-  const addRule = (parent, vertical = false, width = 1, height = 1) => {
-    const ctx = new DrawContext();
-    ctx.size = vertical ? new Size(2, 160) : new Size(600, 2);
-    ctx.opaque = false;
-    ctx.setFillColor(tc("#303943", "#C7D3DC"));
-    ctx.fillRect(new Rect(0, 0, ctx.size.width, ctx.size.height));
-    const rule = parent.addImage(ctx.getImage());
-    rule.imageSize = new Size(width, height);
-    return rule;
-  };
   const w = new ListWidget();
-  const grad = new LinearGradient();
-  grad.locations = [0, 0.55, 1];
-  grad.colors = [tc("#1B1C1B", "#F2F7FB"), tc("#111211", "#E8F2F8"), tc("#08090A", "#F7FAFC")];
-  w.backgroundGradient = grad;
-  w.setPadding(smallFamily ? 11 : 12, smallFamily ? 13 : 16, smallFamily ? 11 : 12, smallFamily ? 13 : 16);
+  const bg = new LinearGradient();
+  bg.locations = [0, 1];
+  bg.colors = [new Color("#191A19"), new Color("#0D0D0D")];
+  w.backgroundGradient = bg;
+  w.setPadding(smallFamily ? 10 : 11, smallFamily ? 12 : 14, smallFamily ? 10 : 11, smallFamily ? 12 : 14);
   w.url = "http://wx.huatianxn.qjcode.com/page/#/bill-query";
+
+  const textColor = {
+    primary: new Color("#F5F5F4"), secondary: new Color("#A3A5A4"), muted: new Color("#777B7A"),
+    line: new Color("#424645"), cyan: new Color("#66D9E8"), green: new Color("#35D07F"), red: new Color("#FF453A"),
+  };
+  const rule = (parent, width) => {
+    const ctx = new DrawContext();
+    ctx.size = new Size(width, 1);
+    ctx.opaque = false;
+    ctx.setFillColor(textColor.line);
+    ctx.fillRect(new Rect(0, 0, width, 1));
+    const img = parent.addImage(ctx.getImage());
+    img.imageSize = new Size(width, 1);
+  };
+  const stamp = value => {
+    const d = value ? new Date(value) : null;
+    if (!d || !Number.isFinite(d.getTime())) return "";
+    const p = n => String(n).padStart(2, "0");
+    return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  };
 
   if (message || !data || !data.bills || !data.bills.length) {
     const t = w.addText(message || "等待账单数据");
     t.font = Font.mediumSystemFont(12);
-    t.textColor = tc("#E8F5FF", "#17344A");
+    t.textColor = textColor.primary;
     t.lineLimit = 2;
     w.addSpacer(3);
     const hint = w.addText("请在 Scriptable 中运行脚本完成首次登录");
     hint.font = Font.systemFont(9);
-    hint.textColor = tc("#A2BACB", "#64849B");
+    hint.textColor = textColor.secondary;
     return w;
   }
 
   const latest = data.bills[0];
   const year = String(new Date().getFullYear());
   const annualVolume = Number.isFinite(Number(data.annualVolume))
-      ? Number(data.annualVolume)
-      : data.bills.filter(x => String(x.month).startsWith(year)).reduce((sum, x) => sum + (Number(x.volume) || 0), 0);
-  const currentTier = annualVolume <= 500 ? 0 : annualVolume <= 660 ? 1 : 2;
-  const tiers = [
-    { price: "¥2.18", range: "0–500" },
-    { price: "¥2.59", range: "501–660" },
-    { price: "¥3.20", range: "661+" },
-  ];
+    ? Number(data.annualVolume)
+    : data.bills.filter(x => String(x.month).startsWith(year)).reduce((sum, x) => sum + (Number(x.volume) || 0), 0);
   const arrears = data.currentArrears;
   const arrearsKnown = arrears !== null && arrears !== undefined && Number.isFinite(Number(arrears));
   const noArrears = arrearsKnown && Number(arrears) <= 0;
-  const hero = w.addStack();
-  hero.centerAlignContent();
-  hero.setPadding(smallFamily ? 3 : 3, smallFamily ? 6 : 9, smallFamily ? 3 : 3, smallFamily ? 6 : 9);
+  const date = formatDate(data.currentReadTime || latest.thisReadTime);
+  const update = stamp(data.updatedAt);
+  const width = smallFamily ? 132 : 300;
 
-  const readingBox = hero.addStack();
-  readingBox.layoutVertically();
-  const readDate = formatDate(data.currentReadTime || latest.thisReadTime);
-  const readingCaption = readingBox.addText("最近表数" + (readDate ? "（" + readDate + "）" : ""));
-  readingCaption.font = Font.systemFont(smallFamily ? 7 : 8);
-  readingCaption.textColor = tc("#9EB7C9", "#5C7C91");
-  const readingRow = readingBox.addStack();
-  readingRow.bottomAlignContent();
-  const readingValue = readingRow.addText(data.currentReading == null ? "—" : Number(data.currentReading).toLocaleString("en-US", { maximumFractionDigits: 1 }));
-  readingValue.font = Font.boldSystemFont(smallFamily ? 15 : 16);
-  readingValue.textColor = tc("#F0FAFF", "#15364C");
-  readingRow.addSpacer(2);
-  const unit = readingRow.addText("m³");
-  unit.font = Font.systemFont(8);
-  unit.textColor = tc("#55D9FF", "#087EAA");
-  hero.addSpacer();
-  const statusBox = hero.addStack();
-  statusBox.layoutVertically();
-  statusBox.addSpacer(1);
-  const arrearsRow = statusBox.addStack();
-  arrearsRow.centerAlignContent();
-  const arrearsLabel = arrearsRow.addText("欠费 ");
-  arrearsLabel.font = Font.systemFont(smallFamily ? 6 : 7);
-  arrearsLabel.textColor = tc("#9EB7C9", "#5C7C91");
-  const arrearsValue = arrearsRow.addText(arrearsKnown ? (noArrears ? "无" : "¥" + Number(arrears).toFixed(2)) : "待确认");
-  arrearsValue.font = Font.semiboldSystemFont(smallFamily ? 8 : 9);
-  arrearsValue.textColor = noArrears ? tc("#48E6B0", "#087F61") : tc(arrearsKnown ? "#FF453A" : "#B7C4CF", arrearsKnown ? "#C65328" : "#687D8B");
-  arrearsRow.addSpacer(smallFamily ? 4 : 8);
-  const currentUsage = arrearsRow.addText("本期 " + Number(latest.volume).toFixed(0) + "m³");
-  currentUsage.font = Font.systemFont(smallFamily ? 7 : 8);
-  currentUsage.textColor = tc("#55D9FF", "#087EAA");
-  const refreshTime = data.updatedAt ? new Date(data.updatedAt) : null;
-  if (refreshTime && Number.isFinite(refreshTime.getTime())) {
-    const refreshLabel = statusBox.addText(refreshTime.toLocaleString("zh-CN", {
-      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
-    }));
-    refreshLabel.font = Font.systemFont(smallFamily ? 6 : 7);
-    refreshLabel.textColor = tc("#94A9B8", "#718A9A");
-  }
+  const header = w.addStack();
+  header.centerAlignContent();
+  const title = header.addText("燃气账单");
+  title.font = Font.boldSystemFont(smallFamily ? 10 : 11);
+  title.textColor = textColor.primary;
+  header.addSpacer();
+  const updated = header.addText(update);
+  updated.font = Font.systemFont(smallFamily ? 6 : 7);
+  updated.textColor = textColor.muted;
 
-  w.addSpacer(smallFamily ? 2 : 3);
-  addRule(w, false, smallFamily ? 120 : 268, 1);
-  w.addSpacer(smallFamily ? 2 : 3);
-  const section = w.addStack();
-  section.centerAlignContent();
-  const sectionTitle = section.addText("用量与费用");
-  sectionTitle.font = Font.semiboldSystemFont(smallFamily ? 7 : 10);
-  sectionTitle.textColor = tc("#EAF5FC", "#24465B");
-  section.addSpacer();
-  const annualValueText = section.addText(annualVolume.toFixed(0) + "m³（年）");
-  annualValueText.font = Font.semiboldSystemFont(smallFamily ? 7 : 8);
-  annualValueText.textColor = tc("#58DDFF", "#087EA8");
-
-  const tierAccents = ["#37D9C4", "#F3CA59", "#FF7EA0"];
-  const tierRow = w.addStack();
-  tierRow.spacing = smallFamily ? 2 : 4;
-  const segmentWidths = smallFamily ? [38, 38, 38] : [88, 88, 88];
-  for (let i = 0; i < tiers.length; i++) {
-    const tier = tiers[i];
-    const pill = tierRow.addStack();
-    pill.centerAlignContent();
-    pill.size = new Size(segmentWidths[i], smallFamily ? 11 : 13);
-    const label = pill.addText(tier.price + " · " + tier.range + "m³");
-    label.font = i === currentTier ? Font.boldSystemFont(smallFamily ? 5 : 7) : Font.systemFont(smallFamily ? 5 : 6);
-    label.textColor = i === currentTier ? tc(tierAccents[i], ["#087E8B", "#8C6A00", "#A63C61"][i]) : tc("#9AAFBD", "#738A99");
-    label.centerAlignText();
-    label.minimumScaleFactor = 0.5;
-  }
-
-  const progress = w.addStack();
-  progress.spacing = 2;
-  const segmentLimits = [500, 160, 340];
-  let remainingVolume = Math.max(0, annualVolume);
-  for (let i = 0; i < segmentWidths.length; i++) {
-    const segment = progress.addStack();
-    segment.size = new Size(segmentWidths[i], smallFamily ? 5 : 7);
-    segment.backgroundColor = tc("#292D32", "#D9E5EC");
-    segment.cornerRadius = 4;
-    const filled = Math.min(remainingVolume, segmentLimits[i]);
-    const fillWidth = Math.max(0, Math.min(segmentWidths[i], segmentWidths[i] * filled / segmentLimits[i]));
-    if (fillWidth > 0) {
-      const fill = segment.addStack();
-      fill.size = new Size(fillWidth, smallFamily ? 5 : 7);
-      fill.backgroundColor = tc(tierAccents[i], ["#087E8B", "#8C6A00", "#A63C61"][i]);
-      fill.cornerRadius = 4;
-    }
-    if (fillWidth < segmentWidths[i]) segment.addSpacer();
-    remainingVolume -= filled;
-  }
-
-  w.addSpacer(smallFamily ? 2 : 3);
-  addRule(w, false, smallFamily ? 120 : 268, 1);
   w.addSpacer(smallFamily ? 1 : 2);
-  const recent = data.bills.slice(0, smallFamily ? 3 : 4);
-  const addBillCard = (parent, item, index, compact) => {
-    const card = parent.addStack();
-    card.layoutVertically();
-    card.setPadding(compact ? 1 : 1, compact ? 4 : 5, compact ? 1 : 1, compact ? 4 : 5);
-    const row = card.addStack();
-    row.centerAlignContent();
-    const month = row.addText(compact ? item.month.slice(5) + "月" : item.month.slice(2).replace("-", "/"));
-    month.font = Font.semiboldSystemFont(compact ? 7 : 9);
-    month.textColor = tc("#D7EFFF", "#27475B");
-    month.minimumScaleFactor = 0.75;
-    row.addSpacer(3);
-    const volume = row.addText(Number(item.volume).toFixed(0) + "m³");
-    volume.font = Font.semiboldSystemFont(compact ? 7 : 9);
-    volume.textColor = tc(index === 0 ? "#58DDFF" : "#D4E9F5", index === 0 ? "#087EA8" : "#35576B");
-    row.addSpacer();
-    const fee = row.addText("¥" + Number(item.fee).toFixed(2));
-    fee.font = Font.systemFont(compact ? 7 : 8);
-    fee.textColor = tc("#A7C2D3", "#6B8798");
-    fee.minimumScaleFactor = 0.75;
-    const readingRow = card.addStack();
-    readingRow.centerAlignContent();
-    const readings = item.lastRead == null || item.thisRead == null
-        ? "表数 — → —"
-        : "表数 " + Number(item.lastRead).toLocaleString("en-US", { maximumFractionDigits: 1 })
-        + " → " + Number(item.thisRead).toLocaleString("en-US", { maximumFractionDigits: 1 });
-    const readText = readingRow.addText(readings);
-    readText.font = Font.systemFont(compact ? 6 : 7);
-    readText.textColor = tc("#93ADBF", "#6B8798");
-    readText.minimumScaleFactor = 0.7;
-  };
+  const summary = w.addStack();
+  summary.centerAlignContent();
+  const arrearsBox = summary.addStack();
+  arrearsBox.layoutVertically();
+  const arrearsCaption = arrearsBox.addText("当前欠费");
+  arrearsCaption.font = Font.systemFont(smallFamily ? 6 : 7);
+  arrearsCaption.textColor = textColor.secondary;
+  const arrearsText = arrearsBox.addText(arrearsKnown ? (noArrears ? "无欠费" : "¥" + Number(arrears).toFixed(2)) : "待确认");
+  arrearsText.font = Font.semiboldSystemFont(smallFamily ? 9 : 10);
+  arrearsText.textColor = noArrears ? textColor.green : (arrearsKnown ? textColor.red : textColor.secondary);
+  summary.addSpacer();
+  const meterBox = summary.addStack();
+  meterBox.layoutVertically();
+  const meterCaption = meterBox.addText("最近表数" + (date ? "（" + date + "）" : ""));
+  meterCaption.font = Font.systemFont(smallFamily ? 6 : 7);
+  meterCaption.textColor = textColor.secondary;
+  meterCaption.rightAlignText();
+  const meterRow = meterBox.addStack();
+  const meterValue = meterRow.addText(data.currentReading == null ? "—" : Number(data.currentReading).toLocaleString("en-US", { maximumFractionDigits: 1 }));
+  meterValue.font = Font.boldSystemFont(smallFamily ? 13 : 15);
+  meterValue.textColor = textColor.primary;
+  meterRow.addSpacer(2);
+  const unit = meterRow.addText("m³");
+  unit.font = Font.systemFont(smallFamily ? 6 : 7);
+  unit.textColor = textColor.cyan;
+  meterValue.rightAlignText();
+  unit.rightAlignText();
+  w.addSpacer(smallFamily ? 2 : 3);
 
-  if (smallFamily) {
-    for (let i = 0; i < recent.length; i++) addBillCard(w, recent[i], i, true);
-  } else {
-    const columns = w.addStack();
-    columns.spacing = 5;
-    const left = columns.addStack();
-    left.layoutVertically();
-    left.spacing = 4;
-    addRule(columns, true, 1, 58);
-    const right = columns.addStack();
-    right.layoutVertically();
-    right.spacing = 4;
-    for (let i = 0; i < recent.length; i++) {
-      const column = i < 2 ? left : right;
-      addBillCard(column, recent[i], i, false);
-      if (i !== 1 && i !== recent.length - 1) addRule(column, false, 124, 1);
-    }
+  const columnWidths = smallFamily ? [26, 52, 25, 29] : [42, 114, 55, 89];
+  const addCell = (row, value, index, color, font, align) => {
+    const cell = row.addStack();
+    cell.size = new Size(columnWidths[index], smallFamily ? 9 : 11);
+    cell.centerAlignContent();
+    const label = cell.addText(value);
+    label.font = font;
+    label.textColor = color;
+    label.minimumScaleFactor = 0.6;
+    if (align === "right") label.rightAlignText();
+    else if (align === "center") label.centerAlignText();
+    return cell;
+  };
+  const tableHeader = w.addStack();
+  addCell(tableHeader, "月份", 0, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "left");
+  addCell(tableHeader, "表数", 1, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "center");
+  addCell(tableHeader, "用量", 2, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "right");
+  addCell(tableHeader, "费用", 3, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "right");
+
+  const recent = data.bills.slice(0, 3);
+  for (let i = 0; i < recent.length; i++) {
+    const item = recent[i];
+    const row = w.addStack();
+    row.centerAlignContent();
+    addCell(row, item.month.slice(2).replace("-", "/"), 0, textColor.primary, Font.semiboldSystemFont(smallFamily ? 6 : 8), "left");
+    const readings = item.lastRead == null || item.thisRead == null
+      ? "— → —"
+      : Number(item.lastRead).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "→" + Number(item.thisRead).toLocaleString("en-US", { maximumFractionDigits: 1 });
+    addCell(row, readings, 1, textColor.secondary, Font.systemFont(smallFamily ? 5 : 7), "center");
+    addCell(row, Number(item.volume).toFixed(0) + "m³", 2, textColor.cyan, Font.semiboldSystemFont(smallFamily ? 6 : 8), "right");
+    addCell(row, "¥" + Number(item.fee).toFixed(2), 3, textColor.primary, Font.semiboldSystemFont(smallFamily ? 6 : 8), "right");
   }
+
+  const yearNow = w.addStack();
+  yearNow.centerAlignContent();
+  const yearCaption = yearNow.addText("年度用气");
+  yearCaption.font = Font.systemFont(smallFamily ? 6 : 7);
+  yearCaption.textColor = textColor.secondary;
+  yearNow.addSpacer();
+  const yearValue = yearNow.addText(annualVolume.toFixed(0) + "m³（年）");
+  yearValue.font = Font.semiboldSystemFont(smallFamily ? 7 : 8);
+  yearValue.textColor = textColor.primary;
+
+  const tierColors = [new Color("#36D17C"), new Color("#F0C44F"), new Color("#70A7FF")];
+  const tierNames = ["一档 ¥2.18", "二档 ¥2.59", "三档 ¥3.20"];
+  const tiers = w.addStack();
+  const tierWidth = width / 3;
+  for (let i = 0; i < tierNames.length; i++) {
+    const cell = tiers.addStack();
+    cell.size = new Size(tierWidth, smallFamily ? 9 : 10);
+    const label = cell.addText(tierNames[i]);
+    label.font = Font.systemFont(smallFamily ? 5 : 6);
+    label.textColor = tierColors[i];
+    label.centerAlignText();
+    label.minimumScaleFactor = 0.6;
+  }
+
+  const axis = new DrawContext();
+  axis.size = new Size(width, smallFamily ? 10 : 11);
+  axis.opaque = false;
+  const h = smallFamily ? 5 : 6;
+  const y = 2;
+  const x1 = width / 3;
+  const x2 = width * 2 / 3;
+  axis.setFillColor(new Color("#3C4143"));
+  axis.fillRect(new Rect(0, y, width, h));
+  const value = Math.max(0, annualVolume);
+  const stageValues = [
+    Math.min(value, 500) / 500,
+    Math.min(Math.max(value - 500, 0), 160) / 160,
+    Math.min(Math.max(value - 660, 0), 340) / 340,
+  ];
+  const stageStarts = [0, x1, x2];
+  for (let i = 0; i < stageValues.length; i++) {
+    if (stageValues[i] <= 0) continue;
+    axis.setFillColor(tierColors[i]);
+    axis.fillRect(new Rect(stageStarts[i], y, tierWidth * stageValues[i], h));
+  }
+  axis.setFillColor(new Color("#D7DADB"));
+  axis.fillRect(new Rect(x1 - 0.5, y - 1, 1, h + 2));
+  axis.fillRect(new Rect(x2 - 0.5, y - 1, 1, h + 2));
+  const markerPosition = value <= 500
+    ? tierWidth * value / 500
+    : value <= 660
+      ? x1 + tierWidth * (value - 500) / 160
+      : x2 + tierWidth * Math.min((value - 660) / 340, 1);
+  axis.setFillColor(new Color("#F5F5F4"));
+  axis.fillEllipse(new Rect(Math.max(0, Math.min(width - 7, markerPosition - 3.5)), y - 1, 7, h + 2));
+  const axisImage = w.addImage(axis.getImage());
+  axisImage.imageSize = new Size(width, smallFamily ? 10 : 11);
+
+  const tickRow = w.addStack();
+  const labelWidth = smallFamily ? 20 : 28;
+  const firstGap = x1 - 14 - labelWidth / 2;
+  const middleGap = x2 - x1 - labelWidth;
+  const tick = (value, labelW, align) => {
+    const holder = tickRow.addStack();
+    holder.size = new Size(labelW, smallFamily ? 8 : 9);
+    holder.centerAlignContent();
+    const t = holder.addText(value);
+    t.font = Font.systemFont(smallFamily ? 5 : 6);
+    t.textColor = textColor.muted;
+    t.minimumScaleFactor = 0.7;
+    if (align === "center") t.centerAlignText();
+    else if (align === "right") t.rightAlignText();
+    return t;
+  };
+  tick("0", 14, "left");
+  tickRow.addSpacer(Math.max(0, firstGap));
+  tick("500", labelWidth, "center");
+  tickRow.addSpacer(Math.max(0, middleGap));
+  tick("660", labelWidth, "center");
+  tickRow.addSpacer();
 
   return w;
 }
