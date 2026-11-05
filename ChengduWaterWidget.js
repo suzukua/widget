@@ -569,8 +569,12 @@ async function makeWidget() {
         }).sort((a, b) => dateKey(b.readTime || b.dlChaoBiaoRQ).localeCompare(dateKey(a.readTime || a.dlChaoBiaoRQ)));
         const water = firstNumber(data, ["arrearmoney", "nYingShouJE", "ysMoney"]);
         const penalty = firstNumber(data, ["penalty", "nYingShouZNJ", "totalpenalty"]);
+        const reportedOther = firstNumber(data, ["otherMoney", "othermoney", "otherFee", "otherfee", "otherAmount", "otheramount", "qitaMoney", "qitaFee", "qtMoney"]);
         let total = firstNumber(data, ["totalMoney", "totalarrearmoney"]);
-        if (total === null) total = water === null && penalty === null ? null : (water || 0) + (penalty || 0);
+        if (total === null) total = water === null && penalty === null && reportedOther === null ? null : (water || 0) + (penalty || 0) + (reportedOther || 0);
+        const other = reportedOther !== null
+          ? reportedOther
+          : total === null ? null : Math.max(0, total - (water || 0) - (penalty || 0));
         const count = firstNumber(data, ["arrearsNum"]);
         const tierConfig = [
           { name: "一阶", range: "0–216", capacity: 216, current: firstNumber(tierData, ["tier1"]), price: firstNumber(tierData, ["tiernoprice1"]) },
@@ -578,7 +582,7 @@ async function makeWidget() {
           { name: "三阶", range: "301+", capacity: null, current: firstNumber(tierData, ["tier3"]), price: firstNumber(tierData, ["tiernoprice3"]) }
         ];
         cache = {
-          account: String(account), day: today, fetchedAt: Date.now(), water, penalty, total, count,
+          account: String(account), day: today, fetchedAt: Date.now(), water, penalty, other, total, count,
           tiers: tierConfig,
           history: history.slice(0, 3).map(item => ({
             readTime: item.readTime || item.dlChaoBiaoRQ || "",
@@ -597,6 +601,9 @@ async function makeWidget() {
       }
     }
     const { water, penalty, total, count } = cache;
+    const other = cache.other === undefined
+      ? (total === null ? null : Math.max(0, total - (water || 0) - (penalty || 0)))
+      : cache.other;
 
     addDivider(widget, 1, 1);
     const dueRow = widget.addStack();
@@ -609,7 +616,7 @@ async function makeWidget() {
     dueText.font = Font.boldSystemFont(11);
     dueText.textColor = new Color(Number(total) > 0 ? "#FF453A" : "#F2F2F7");
     dueRow.addSpacer();
-    const detail = dueRow.addText(`水费 ${compactMoney(water)} · 违约金 ${compactMoney(penalty)}`);
+    const detail = dueRow.addText(`水费 ${compactMoney(water)} · 违约金 ${compactMoney(penalty)} · 其他费用 ${compactMoney(other)}`);
     detail.font = Font.systemFont(7);
     detail.textColor = new Color("#8E8E93");
 
