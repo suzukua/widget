@@ -342,8 +342,8 @@ function makeWidget(data, stale = false, message = null) {
   const latest = data.bills[0];
   const year = String(new Date().getFullYear());
   const annualVolume = Number.isFinite(Number(data.annualVolume))
-    ? Number(data.annualVolume)
-    : data.bills.filter(x => String(x.month).startsWith(year)).reduce((sum, x) => sum + (Number(x.volume) || 0), 0);
+      ? Number(data.annualVolume)
+      : data.bills.filter(x => String(x.month).startsWith(year)).reduce((sum, x) => sum + (Number(x.volume) || 0), 0);
   const arrears = data.currentArrears;
   const arrearsKnown = arrears !== null && arrears !== undefined && Number.isFinite(Number(arrears));
   const noArrears = arrearsKnown && Number(arrears) <= 0;
@@ -353,7 +353,7 @@ function makeWidget(data, stale = false, message = null) {
 
   const header = w.addStack();
   header.centerAlignContent();
-  const title = header.addText("燃气账单");
+  const title = header.addText("华天兴能燃气");
   title.font = Font.boldSystemFont(smallFamily ? 10 : 11);
   title.textColor = textColor.primary;
   header.addSpacer();
@@ -365,47 +365,43 @@ function makeWidget(data, stale = false, message = null) {
   const summary = w.addStack();
   summary.centerAlignContent();
   const arrearsBox = summary.addStack();
-  arrearsBox.layoutVertically();
-  const arrearsCaption = arrearsBox.addText("当前欠费");
+  arrearsBox.centerAlignContent();
+  const arrearsCaption = arrearsBox.addText("当前欠费 ");
   arrearsCaption.font = Font.systemFont(smallFamily ? 6 : 7);
   arrearsCaption.textColor = textColor.secondary;
   const arrearsText = arrearsBox.addText(arrearsKnown ? (noArrears ? "无欠费" : "¥" + Number(arrears).toFixed(2)) : "待确认");
-  arrearsText.font = Font.semiboldSystemFont(smallFamily ? 9 : 10);
+  arrearsText.font = Font.semiboldSystemFont(smallFamily ? 8 : 9);
   arrearsText.textColor = noArrears ? textColor.green : (arrearsKnown ? textColor.red : textColor.secondary);
   summary.addSpacer();
   const meterBox = summary.addStack();
-  meterBox.layoutVertically();
-  const meterCaption = meterBox.addText("最近表数" + (date ? "（" + date + "）" : ""));
+  meterBox.centerAlignContent();
+  const meterCaption = meterBox.addText("最近表数" + (date ? "（" + date + "）" : "") + " ");
   meterCaption.font = Font.systemFont(smallFamily ? 6 : 7);
   meterCaption.textColor = textColor.secondary;
-  meterCaption.rightAlignText();
-  const meterRow = meterBox.addStack();
-  const meterValue = meterRow.addText(data.currentReading == null ? "—" : Number(data.currentReading).toLocaleString("en-US", { maximumFractionDigits: 1 }));
-  meterValue.font = Font.boldSystemFont(smallFamily ? 13 : 15);
+  const meterValue = meterBox.addText(data.currentReading == null ? "—" : Number(data.currentReading).toLocaleString("en-US", { maximumFractionDigits: 1 }));
+  meterValue.font = Font.boldSystemFont(smallFamily ? 10 : 12);
   meterValue.textColor = textColor.primary;
-  meterRow.addSpacer(2);
-  const unit = meterRow.addText("m³");
+  const unit = meterBox.addText("m³");
   unit.font = Font.systemFont(smallFamily ? 6 : 7);
   unit.textColor = textColor.cyan;
-  meterValue.rightAlignText();
-  unit.rightAlignText();
   w.addSpacer(smallFamily ? 2 : 3);
+  rule(w, width);
 
-  const columnWidths = smallFamily ? [26, 52, 25, 29] : [42, 114, 55, 89];
+  const columnWidths = smallFamily ? [22, 51, 25, 34] : [36, 116, 56, 92];
   const addCell = (row, value, index, color, font, align) => {
     const cell = row.addStack();
-    cell.size = new Size(columnWidths[index], smallFamily ? 9 : 11);
+    cell.size = new Size(columnWidths[index], smallFamily ? 8 : 10);
     cell.centerAlignContent();
     const label = cell.addText(value);
     label.font = font;
     label.textColor = color;
-    label.minimumScaleFactor = 0.6;
+    label.minimumScaleFactor = 0.65;
+    if (align === "center") label.centerAlignText();
     if (align === "right") label.rightAlignText();
-    else if (align === "center") label.centerAlignText();
-    return cell;
   };
   const tableHeader = w.addStack();
-  addCell(tableHeader, "月份", 0, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "left");
+  tableHeader.centerAlignContent();
+  addCell(tableHeader, "月", 0, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "left");
   addCell(tableHeader, "表数", 1, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "center");
   addCell(tableHeader, "用量", 2, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "right");
   addCell(tableHeader, "费用", 3, textColor.muted, Font.systemFont(smallFamily ? 5 : 6), "right");
@@ -415,13 +411,13 @@ function makeWidget(data, stale = false, message = null) {
     const item = recent[i];
     const row = w.addStack();
     row.centerAlignContent();
-    addCell(row, item.month.slice(2).replace("-", "/"), 0, textColor.primary, Font.semiboldSystemFont(smallFamily ? 6 : 8), "left");
+    addCell(row, item.month.slice(2).replace("-", "/"), 0, textColor.primary, Font.semiboldSystemFont(smallFamily ? 7 : 9), "left");
     const readings = item.lastRead == null || item.thisRead == null
-      ? "— → —"
-      : Number(item.lastRead).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "→" + Number(item.thisRead).toLocaleString("en-US", { maximumFractionDigits: 1 });
-    addCell(row, readings, 1, textColor.secondary, Font.systemFont(smallFamily ? 5 : 7), "center");
-    addCell(row, Number(item.volume).toFixed(0) + "m³", 2, textColor.cyan, Font.semiboldSystemFont(smallFamily ? 6 : 8), "right");
-    addCell(row, "¥" + Number(item.fee).toFixed(2), 3, textColor.primary, Font.semiboldSystemFont(smallFamily ? 6 : 8), "right");
+        ? "— → —"
+        : Number(item.lastRead).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "→" + Number(item.thisRead).toLocaleString("en-US", { maximumFractionDigits: 1 });
+    addCell(row, readings, 1, textColor.secondary, Font.systemFont(smallFamily ? 6 : 8), "center");
+    addCell(row, Number(item.volume).toFixed(0) + "m³", 2, textColor.cyan, Font.semiboldSystemFont(smallFamily ? 7 : 9), "right");
+    addCell(row, "¥" + Number(item.fee).toFixed(2), 3, textColor.primary, Font.semiboldSystemFont(smallFamily ? 7 : 9), "right");
   }
 
   const yearNow = w.addStack();
@@ -435,56 +431,36 @@ function makeWidget(data, stale = false, message = null) {
   yearValue.textColor = textColor.primary;
 
   const tierColors = [new Color("#36D17C"), new Color("#F0C44F"), new Color("#70A7FF")];
-  const tierNames = ["一档 ¥2.18", "二档 ¥2.59", "三档 ¥3.20"];
-  const tiers = w.addStack();
-  const tierWidth = width / 3;
-  for (let i = 0; i < tierNames.length; i++) {
-    const cell = tiers.addStack();
-    cell.size = new Size(tierWidth, smallFamily ? 9 : 10);
-    const label = cell.addText(tierNames[i]);
-    label.font = Font.systemFont(smallFamily ? 5 : 6);
-    label.textColor = tierColors[i];
-    label.centerAlignText();
-    label.minimumScaleFactor = 0.6;
-  }
-
   const axis = new DrawContext();
   axis.size = new Size(width, smallFamily ? 10 : 11);
   axis.opaque = false;
   const h = smallFamily ? 5 : 6;
   const y = 2;
-  const x1 = width / 3;
-  const x2 = width * 2 / 3;
+  const tierWidth = width / 3;
+  const x1 = tierWidth;
+  const x2 = tierWidth * 2;
   axis.setFillColor(new Color("#3C4143"));
   axis.fillRect(new Rect(0, y, width, h));
   const value = Math.max(0, annualVolume);
-  const stageValues = [
-    Math.min(value, 500) / 500,
-    Math.min(Math.max(value - 500, 0), 160) / 160,
-    Math.min(Math.max(value - 660, 0), 340) / 340,
-  ];
-  const stageStarts = [0, x1, x2];
+  const stageValues = [Math.min(value, 500) / 500, Math.min(Math.max(value - 500, 0), 160) / 160, Math.min(Math.max(value - 660, 0), 340) / 340];
+  const starts = [0, x1, x2];
   for (let i = 0; i < stageValues.length; i++) {
     if (stageValues[i] <= 0) continue;
     axis.setFillColor(tierColors[i]);
-    axis.fillRect(new Rect(stageStarts[i], y, tierWidth * stageValues[i], h));
+    axis.fillRect(new Rect(starts[i], y, tierWidth * stageValues[i], h));
   }
-  axis.setFillColor(new Color("#D7DADB"));
+  axis.setFillColor(new Color("#B8C0C5"));
   axis.fillRect(new Rect(x1 - 0.5, y - 1, 1, h + 2));
   axis.fillRect(new Rect(x2 - 0.5, y - 1, 1, h + 2));
-  const markerPosition = value <= 500
-    ? tierWidth * value / 500
-    : value <= 660
-      ? x1 + tierWidth * (value - 500) / 160
-      : x2 + tierWidth * Math.min((value - 660) / 340, 1);
   axis.setFillColor(new Color("#F5F5F4"));
-  axis.fillEllipse(new Rect(Math.max(0, Math.min(width - 7, markerPosition - 3.5)), y - 1, 7, h + 2));
+  const marker = value <= 500 ? tierWidth * value / 500 : value <= 660 ? x1 + tierWidth * (value - 500) / 160 : x2 + tierWidth * Math.min((value - 660) / 340, 1);
+  axis.fillEllipse(new Rect(Math.max(0, Math.min(width - 7, marker - 3.5)), y - 1, 7, h + 2));
   const axisImage = w.addImage(axis.getImage());
   axisImage.imageSize = new Size(width, smallFamily ? 10 : 11);
 
   const tickRow = w.addStack();
-  const labelWidth = smallFamily ? 20 : 28;
-  const firstGap = x1 - 14 - labelWidth / 2;
+  const labelWidth = smallFamily ? 18 : 24;
+  const firstGap = x1 - 12 - labelWidth / 2;
   const middleGap = x2 - x1 - labelWidth;
   const tick = (value, labelW, align) => {
     const holder = tickRow.addStack();
@@ -498,12 +474,25 @@ function makeWidget(data, stale = false, message = null) {
     else if (align === "right") t.rightAlignText();
     return t;
   };
-  tick("0", 14, "left");
+  tick("0", 12, "left");
   tickRow.addSpacer(Math.max(0, firstGap));
   tick("500", labelWidth, "center");
   tickRow.addSpacer(Math.max(0, middleGap));
   tick("660", labelWidth, "center");
   tickRow.addSpacer();
+
+  const tierNames = ["一档 ¥2.18", "二档 ¥2.59", "三档 ¥3.20"];
+  const tiers = w.addStack();
+  const tierLabelWidth = width / 3;
+  for (let i = 0; i < tierNames.length; i++) {
+    const cell = tiers.addStack();
+    cell.size = new Size(tierLabelWidth, smallFamily ? 9 : 10);
+    const label = cell.addText(tierNames[i]);
+    label.font = Font.systemFont(smallFamily ? 5 : 6);
+    label.textColor = tierColors[i];
+    label.centerAlignText();
+    label.minimumScaleFactor = 0.6;
+  }
 
   return w;
 }
